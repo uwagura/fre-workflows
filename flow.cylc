@@ -89,6 +89,8 @@
     {# Standard Jinja2 triggers are also available (e.g. "replace") #}
     component = {{ PP_COMPONENTS | replace(' ', ', ') }}
 
+    ens = 1..5
+
 
 
 [scheduling]
@@ -129,7 +131,7 @@
 
 {# All tasks in the STAGE-HISTORY family (staging history and staging history-refined) are started #}
 {# once the pp-starter task succeeds.                                                              #}
-pp-starter => STAGE-HISTORY
+pp-starter<ens> => STAGE-HISTORY<ens>
 
 {# Jinja is useful to include or exclude parts of the configuration. In this case, the lines between              #}
 {# if DO_REFINEDIAG and endif are used or not used, depending on the value of DO_REFINEDIAG (in rose-suite.conf). #}
@@ -163,7 +165,7 @@ STAGE-HISTORY:succeed-all => mask-atmos-plevel<regrid> => regrid-xy<regrid>
 {% endif %}
 
 {% if DO_NATIVE %}
-STAGE-HISTORY:succeed-all => split-netcdf-native<native> => rename-split-to-pp-native<native>
+STAGE-HISTORY<ens>:succeed-all => split-netcdf-native<native><ens> => rename-split-to-pp-native<native><ens>
     {% if DO_ATMOS_PLEVEL_MASKING %}
 STAGE-HISTORY:succeed-all => mask-atmos-plevel<native> => split-netcdf-native<native>
     {% endif %}
@@ -203,7 +205,7 @@ rename-split-to-pp-native<native> => clean-split-native
         R1 = """
 {# The static processing is similar to the "every history segment" processing, #}
 {# except uses different history file lists. #}
-pp-starter => STAGE-HISTORY
+pp-starter<ens> => STAGE-HISTORY<ens>
 {% if DO_STATICS %}
     {% if DO_REGRID %}
 STAGE-HISTORY:succeed-all => regrid-xy<regrid_static> => split-netcdf-regrid<regrid_static> => rename-split-to-pp-regrid<regrid_static>
@@ -273,9 +275,9 @@ rename-split-to-pp-regrid<regrid>
 {% endif %}
 
 {% if DO_NATIVE %}
-rename-split-to-pp-native<native>
+rename-split-to-pp-native<native><ens>
     {% for SEGMENT in range(1, HIST_SEGMENTS_PER_CHUNK_A) %}
-& rename-split-to-pp-native<native>[{{ HISTORY_SEGMENT | multiply_duration(-SEGMENT) }}]
+& rename-split-to-pp-native<native><ens>[{{ HISTORY_SEGMENT | multiply_duration(-SEGMENT) }}]
     {% endfor %}
     {% if HISTORY_SEGMENT != PP_CHUNK_A %}
 => make-timeseries-native-{{ PP_CHUNK_A }}<native>
@@ -324,7 +326,7 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_A }}:succeed-all => clean-shards-{{ HISTORY_S
 REMAP-PP-COMPONENTS-TS-{{ PP_CHUNK_A }}:succeed-all => mdtf
 {% endif %}
 
-REMAP-PP-COMPONENTS-TS-{{ PP_CHUNK_A }}:succeed-all => data-catalog?
+REMAP-PP-COMPONENTS-TS-{{ PP_CHUNK_A }}<ens>:succeed-all => data-catalog<ens>?
 """
 
 
@@ -430,7 +432,7 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
 {% endif %}
 
 [runtime]
-    [[pp-starter]]
+    [[pp-starter<ens>]]
         inherit = PP-STARTER
         # NOTE! script must appear *before* [[[enviroment]]] or else
         # the job scripts will have quoting issues
@@ -459,7 +461,7 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
         [[[environment]]]
             targetFile = {{ HISTORY_DIR }}/YYYYMMDD.nc.tar
 
-    [[STAGE-HISTORY]]
+    [[STAGE-HISTORY<ens>]]
         # Increase time limit for staging jobs to 8 hours
         execution time limit = PT8H
         script = """
@@ -541,8 +543,8 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
             echo "Natural end of the history file staging"
             exit 0
         """
-    [[stage-history]]
-        inherit = STAGE-HISTORY
+    [[stage-history<ens>]]
+        inherit = STAGE-HISTORY<ens>
         [[[environment]]]
             historyDir = {{ HISTORY_DIR }}
             ptmpDir = {{ PTMP_DIR }}
@@ -725,15 +727,15 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
             component = $CYLC_TASK_PARAM_regrid
 {% endif %}
 
-    [[SPLIT-NETCDF]]
+    [[SPLIT-NETCDF<ens>]]
         pre-script = mkdir -p $outputDir
         script = rose task-run --verbose --app-key split-netcdf
         [[[environment]]]
             date = $CYLC_TASK_CYCLE_POINT
 
 {% if DO_NATIVE %}
-    [[SPLIT-NETCDF-NATIVE]]
-        inherit = SPLIT-NETCDF
+    [[SPLIT-NETCDF-NATIVE<ens>]]
+        inherit = SPLIT-NETCDF<ens>
         [[[environment]]]
             inputDir = $CYLC_WORKFLOW_SHARE_DIR/cycle/$CYLC_TASK_CYCLE_POINT/history/native
             outputDir = $CYLC_WORKFLOW_SHARE_DIR/cycle/$CYLC_TASK_CYCLE_POINT/split/native
@@ -751,8 +753,8 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
 {% endif %}
 
 {% if DO_NATIVE %}
-    [[split-netcdf-native<native>]]
-        inherit = SPLIT-NETCDF-NATIVE, <native>
+    [[split-netcdf-native<native><ens>]]
+        inherit = SPLIT-NETCDF-NATIVE<ens>, <native>
     {% if DO_STATICS %}
     [[split-netcdf-native<native_static>]]
         inherit = SPLIT-NETCDF-NATIVE, <native_static>
@@ -773,13 +775,13 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
     {% endif %}
 {% endif %}
 
-    [[RENAME-SPLIT-TO-PP]]
+    [[RENAME-SPLIT-TO-PP<ens>]]
         pre-script = mkdir -p $outputDir
         script = rose task-run --verbose --app-key rename-split-to-pp
 
 {% if DO_NATIVE %}
-    [[RENAME-SPLIT-TO-PP-NATIVE]]
-        inherit = RENAME-SPLIT-TO-PP
+    [[RENAME-SPLIT-TO-PP-NATIVE<ens>]]
+        inherit = RENAME-SPLIT-TO-PP<ens>
         [[[environment]]]
             inputDir = $CYLC_WORKFLOW_SHARE_DIR/cycle/$CYLC_TASK_CYCLE_POINT/split/native
             outputDir = $CYLC_WORKFLOW_SHARE_DIR/shards/ts/native
@@ -797,8 +799,8 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
 {% endif %}
 
 {% if DO_NATIVE %}
-    [[rename-split-to-pp-native<native>]]
-        inherit = RENAME-SPLIT-TO-PP-NATIVE, <native>
+    [[rename-split-to-pp-native<native><ens>]]
+        inherit = RENAME-SPLIT-TO-PP-NATIVE<ens>, <native>
     {% if DO_STATICS %}
     [[rename-split-to-pp-native<native_static>]]
         inherit = RENAME-SPLIT-TO-PP-NATIVE, <native_static>
@@ -818,25 +820,25 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
     {% endif %}
 {% endif %}
 
-    [[REMAP-PP-COMPONENTS]]
+    [[REMAP-PP-COMPONENTS<ens>]]
         script = rose task-run --verbose --app-key remap-pp-components
         [[[environment]]]
             components = $CYLC_TASK_PARAM_component
 
-    [[REMAP-PP-COMPONENTS-TS]]
-        inherit = REMAP-PP-COMPONENTS
+    [[REMAP-PP-COMPONENTS-TS<ens>]]
+        inherit = REMAP-PP-COMPONENTS<ens>
         [[[environment]]]
             inputDir = $CYLC_WORKFLOW_SHARE_DIR/shards/ts
             outputDir = {{ PP_DIR }}
             product = ts
             dirTSWorkaround = 1
-    [[REMAP-PP-COMPONENTS-TS-{{ PP_CHUNK_A }}]]
-        inherit = REMAP-PP-COMPONENTS-TS
+    [[REMAP-PP-COMPONENTS-TS-{{ PP_CHUNK_A }}<ens>]]
+        inherit = REMAP-PP-COMPONENTS-TS<ens>
         [[[environment]]]
             begin = $(cylc cycle-point --offset=-{{ PP_CHUNK_A | subtract_durations(HISTORY_SEGMENT) }})
             currentChunk = {{ PP_CHUNK_A }}
-    [[remap-pp-components-ts-{{ PP_CHUNK_A }}<component>]]
-        inherit = REMAP-PP-COMPONENTS-TS-{{ PP_CHUNK_A }}, <component>
+    [[remap-pp-components-ts-{{ PP_CHUNK_A }}<component><ens>]]
+        inherit = REMAP-PP-COMPONENTS-TS-{{ PP_CHUNK_A }}<ens>, <component>
 
 {% if DO_SECONDARY_PP %}
     [[REMAP-PP-COMPONENTS-TS-{{ PP_CHUNK_B }}]]
@@ -919,7 +921,7 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
             product = static
             dirTSWorkaround = ""
 {% endif %}
-    [[data-catalog]]
+    [[data-catalog<ens>]]
         script = """
         fre catalog builder --overwrite $ppdir $ppdir/catalog
         # workaround to replace P1M with monthly

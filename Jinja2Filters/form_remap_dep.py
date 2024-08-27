@@ -129,11 +129,11 @@ def form_remap_dep(grid_type: str, temporal_type: str, chunk: str, pp_components
                           makets_stmt = f"{makets_stmt} & {prereq_task}-{grid}-{chunk}_{src}"
                   else:
                       if prereq_task == 'rename-split-to-pp':
-                          makets_stmt = f"{prereq_task}-{grid}_{src}"
+                          makets_stmt = f"{prereq_task}-{grid}_{src}<ens>"
                       else:
                           makets_stmt = f"{prereq_task}-{grid}-{chunk}_{src}"
  
-              remap_stmt = f"remap-pp-components-{output_type}-{chunk}_{key}"
+              remap_stmt = f"remap-pp-components-{output_type}-{chunk}_{key}<ens>"
               remap_dep_stmt = f"{makets_stmt} => {remap_stmt}"
               remap_dep += f"{remap_dep_stmt}\n"
     # Possibly, no tasks are needed for the given request (grid type, temporal/static, chunk, components).
