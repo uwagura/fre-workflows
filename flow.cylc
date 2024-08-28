@@ -91,9 +91,9 @@
 
     ens = 3..4
 
-    [[templates]]
+    #[[templates]]
 
-        ens = e%(ens)02d
+        #ens = e%(ens)02d
 
 [scheduling]
     initial cycle point = {{ PP_START }}
@@ -435,7 +435,7 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
 
 [runtime]
     [[pp-starter<ens>]]
-        inherit = PP-STARTER
+        inherit = PP-STARTER<ens>
         # NOTE! script must appear *before* [[[enviroment]]] or else
         # the job scripts will have quoting issues
         script = """
@@ -853,19 +853,19 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
 
 {% endif %}
 
-    [[REMAP-PP-COMPONENTS-AV]]
-        inherit = REMAP-PP-COMPONENTS
+    [[REMAP-PP-COMPONENTS-AV<ens>]]
+        inherit = REMAP-PP-COMPONENTS<ens>
         [[[environment]]]
             inputDir = $CYLC_WORKFLOW_SHARE_DIR/shards/av
             outputDir = $CYLC_WORKFLOW_SHARE_DIR/pp/av
             product = av
-    [[REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_A }}]]
-        inherit = REMAP-PP-COMPONENTS-AV
+    [[REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_A }}<ens>]]
+        inherit = REMAP-PP-COMPONENTS-AV<ens>
         [[[environment]]]
             begin = $(cylc cycle-point --offset=-{{ PP_CHUNK_A | subtract_durations(HISTORY_SEGMENT) }})
             currentChunk = {{ PP_CHUNK_A }}
-    [[remap-pp-components-av-{{ PP_CHUNK_A }}<component>]]
-        inherit = REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_A }}, <component>
+    [[remap-pp-components-av-{{ PP_CHUNK_A }}<component><ens>]]
+        inherit = REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_A }}<ens>, <component>
 
 {% if DO_SECONDARY_PP %}
     [[REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}]]
