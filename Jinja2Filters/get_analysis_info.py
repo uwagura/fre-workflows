@@ -183,14 +183,14 @@ def get_cumulative_info(node, pp_components, pp_dir, chunk, pp_start, pp_stop, a
 
             # add the task definition for each ending time
             defs += f"""
-    [[analysis-{item}-{date_str}]]
-        inherit = ANALYSIS-CUMULATIVE-{date_str}, analysis-{item}
+    [[analysis-{item}-{date_str}<ens>]]
+        inherit = ANALYSIS-CUMULATIVE-{date_str}<ens>, analysis-{item}
             """
 
             # add the task definition family for each ending time
             defs += f"""
-    [[ANALYSIS-CUMULATIVE-{date_str}]]
-        inherit = ANALYSIS
+    [[ANALYSIS-CUMULATIVE-{date_str}<ens>]]
+        inherit = ANALYSIS<ens>
         [[[environment]]]
             yr1 = {metomi.isodatetime.dumpers.TimePointDumper().strftime(pp_start, '%Y')}
             yr2 = {metomi.isodatetime.dumpers.TimePointDumper().strftime(date, '%Y')}
@@ -223,7 +223,7 @@ def get_cumulative_info(node, pp_components, pp_dir, chunk, pp_start, pp_stop, a
                 if item_product == "av":
                     graph += f"            COMBINE-TIMEAVGS-{chunk}:succeed-all\n"
                 else:
-                    graph += f"            REMAP-PP-COMPONENTS-TS-{chunk}:succeed-all\n"
+                    graph += f"            REMAP-PP-COMPONENTS-TS-{chunk}<ens>:succeed-all\n"
             d = date
             i = -1
             while d > pp_start + chunk:
@@ -231,13 +231,13 @@ def get_cumulative_info(node, pp_components, pp_dir, chunk, pp_start, pp_stop, a
                     if item_product == "av":
                         graph += f"            & COMBINE-TIMEAVGS-{chunk}[{i*chunk}]:succeed-all\n"
                     else:
-                        graph += f"            & REMAP-PP-COMPONENTS-TS-{chunk}[{i*chunk}]:succeed-all\n"
+                        graph += f"            & REMAP-PP-COMPONENTS-TS-{chunk}[{i*chunk}]<ens>:succeed-all\n"
                 i -= 1
                 d -= chunk
             if analysis_only:
                 graph += f"            ANALYSIS-CUMULATIVE-{metomi.isodatetime.dumpers.TimePointDumper().strftime(date, '%Y')}\n"
             else:
-                graph += f"            => ANALYSIS-CUMULATIVE-{metomi.isodatetime.dumpers.TimePointDumper().strftime(date, '%Y')}\n"
+                graph += f"            => ANALYSIS-CUMULATIVE-{metomi.isodatetime.dumpers.TimePointDumper().strftime(date, '%Y')}<ens>\n"
             graph += f"        \"\"\"\n"
             date += chunk
 
@@ -291,14 +291,14 @@ def get_per_interval_info(node, pp_components, pp_dir, chunk, analysis_only=Fals
         # Then, the analysis script will inherit from that family, to enable
         # both the task triggering and the yr1 and datachunk template vars.
         defs += f"""
-    [[analysis-{item}]]
-        inherit = ANALYSIS-{chunk}
+    [[analysis-{item}<ens>]]
+        inherit = ANALYSIS-{chunk}<ens>
         """
 
         # create the task family for all every-interval analysis scripts
         defs += f"""
-    [[ANALYSIS-{chunk}]]
-        inherit = ANALYSIS
+    [[ANALYSIS-{chunk}<ens>]]
+        inherit = ANALYSIS<ens>
         [[[environment]]]
             yr1 = $(cylc cycle-point --template=CCYY --offset=-{chunk - oneyear})
             datachunk = {chunk.years}
@@ -329,7 +329,7 @@ def get_per_interval_info(node, pp_components, pp_dir, chunk, analysis_only=Fals
             if item_product == "av":
                 graph += f"            COMBINE-TIMEAVGS-{chunk}:succeed-all => ANALYSIS-{chunk}?\n"
             else:
-                graph += f"            REMAP-PP-COMPONENTS-TS-{chunk}:succeed-all => ANALYSIS-{chunk}?\n"
+                graph += f"            REMAP-PP-COMPONENTS-TS-{chunk}<ens>:succeed-all => ANALYSIS-{chunk}<ens>?\n"
         graph += f"        \"\"\"\n"
 
     return(defs, graph)
@@ -347,7 +347,7 @@ def form_task_definition_string(freq, chunk, pp_dir, comps, item, script_file, s
         in_data_dir = f"{pp_dir}/{comps[0]}/av/{bronx_freq}_{bronx_chunk}"
 
     string = f"""
-    [[analysis-{item}]]
+    [[analysis-{item}<ens>]]
         script = '''
             chmod +x $CYLC_WORKFLOW_SHARE_DIR/analysis-scripts/{script_file}.$yr1-$yr2
             $CYLC_WORKFLOW_SHARE_DIR/analysis-scripts/{script_file}.$yr1-$yr2 {script_extras}
@@ -423,14 +423,14 @@ def get_defined_interval_info(node, pp_components, pp_dir, chunk, pp_start, pp_s
 
         # set the task definition above to inherit from the task family below
         defs += f"""
-    [[analysis-{item}]]
-        inherit = ANALYSIS-{item_start_str}_{item_end_str}
+    [[analysis-{item}<ens>]]
+        inherit = ANALYSIS-{item_start_str}_{item_end_str}<ens>
         """
 
         # set time-varying stuff
         defs += f"""
-    [[ANALYSIS-{item_start_str}_{item_end_str}]]
-        inherit = ANALYSIS
+    [[ANALYSIS-{item_start_str}_{item_end_str}<ens>]]
+        inherit = ANALYSIS<ens>
         [[[environment]]]
             yr1 = {item_start_str}
             yr2 = {item_end_str}
@@ -455,7 +455,7 @@ def get_defined_interval_info(node, pp_components, pp_dir, chunk, pp_start, pp_s
             if item_product == "av":
                 graph += f"            COMBINE-TIMEAVGS-{chunk}:succeed-all\n"
             else:
-                graph += f"            REMAP-PP-COMPONENTS-TS-{chunk}:succeed-all\n"
+                graph += f"            REMAP-PP-COMPONENTS-TS-{chunk}<ens>:succeed-all\n"
         d = d2
         i = -1
         while d > pp_start + chunk:
@@ -463,13 +463,13 @@ def get_defined_interval_info(node, pp_components, pp_dir, chunk, pp_start, pp_s
                 if item_product == "av":
                     graph += f"            & COMBINE-TIMEAVGS-{chunk}[{i*chunk}]:succeed-all\n"
                 else:
-                    graph += f"            & REMAP-PP-COMPONENTS-TS-{chunk}[{i*chunk}]:succeed-all\n"
+                    graph += f"            & REMAP-PP-COMPONENTS-TS-{chunk}[{i*chunk}]<ens>:succeed-all\n"
             i -= 1
             d -= chunk
         if analysis_only:
             graph += f"            ANALYSIS-{item_start_str}_{item_end_str}\n"
         else:
-            graph += f"            => ANALYSIS-{item_start_str}_{item_end_str}\n"
+            graph += f"            => ANALYSIS-{item_start_str}_{item_end_str}<ens>\n"
         graph += f"        \"\"\"\n"
 
     return(defs, graph)

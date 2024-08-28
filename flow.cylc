@@ -89,9 +89,11 @@
     {# Standard Jinja2 triggers are also available (e.g. "replace") #}
     component = {{ PP_COMPONENTS | replace(' ', ', ') }}
 
-    ens = 1..5
+    ens = 3..4
 
+    [[templates]]
 
+        ens = e%(ens)02d
 
 [scheduling]
     initial cycle point = {{ PP_START }}
@@ -1025,7 +1027,7 @@ REMAP-PP-COMPONENTS-AV-{{ PP_CHUNK_B }}:succeed-all => clean-shards-{{ PP_CHUNK_
 {% endif %}
 
 {% if DO_ANALYSIS %}
-    [[ANALYSIS]]
+    [[ANALYSIS<ens>]]
         # Increase time limit for analysis jobs to 24 hours
         execution time limit = PT24H
         pre-script = """
